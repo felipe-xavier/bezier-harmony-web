@@ -1,0 +1,353 @@
+<html><head><base href="https://websim.ai" />
+<title>Interactive Bezier Curve Animation with iOS-style Toggles</title>
+<style>
+  body {
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #000;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    color: #fff;
+    overflow: hidden;
+  }
+  #canvasContainer {
+    width: 100vw;
+    height: calc(100vh - 80px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  canvas {
+    border: 1px solid #444;
+    background-color: black;
+  }
+  #controls {
+    width: 100%;
+    padding: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.7);
+  }
+  button {
+    margin: 5px;
+    padding: 8px 16px;
+    font-size: 16px;
+    background-color: #0A84FF;
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+  button:hover {
+    background-color: #007AFF;
+  }
+  button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .toggle-container {
+    display: flex;
+    align-items: center;
+    margin: 0 10px;
+  }
+  .toggle-label {
+    margin-right: 10px;
+    font-size: 16px;
+  }
+  .toggle {
+    position: relative;
+    display: inline-block;
+    width: 52px;
+    height: 32px;
+  }
+  .toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 28px;
+    width: 28px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+  input:checked + .slider {
+    background-color: #34C759;
+  }
+  input:checked + .slider:before {
+    transform: translateX(20px);
+  }
+</style>
+</head>
+<body>
+<div id="canvasContainer">
+  <canvas id="bezierCanvas"></canvas>
+</div>
+<div id="controls">
+  <button id="undoBtn">Undo</button>
+  <button id="clearBtn">Clear All</button>
+  <div class="toggle-container">
+    <span class="toggle-label">Moving Dot</span>
+    <label class="toggle">
+      <input type="checkbox" id="showDot" checked>
+      <span class="slider"></span>
+    </label>
+  </div>
+  <div class="toggle-container">
+    <span class="toggle-label">Curve</span>
+    <label class="toggle">
+      <input type="checkbox" id="showCurve" checked>
+      <span class="slider"></span>
+    </label>
+  </div>
+  <div class="toggle-container">
+    <span class="toggle-label">Main Dots</span>
+    <label class="toggle">
+      <input type="checkbox" id="showMainDots" checked>
+      <span class="slider"></span>
+    </label>
+  </div>
+  <div class="toggle-container">
+    <span class="toggle-label">Fixed Lines</span>
+    <label class="toggle">
+      <input type="checkbox" id="showFixedLines" checked>
+      <span class="slider"></span>
+    </label>
+  </div>
+  <div class="toggle-container">
+    <span class="toggle-label">Dot Trail</span>
+    <label class="toggle">
+      <input type="checkbox" id="showDotTrail" checked>
+      <span class="slider"></span>
+    </label>
+  </div>
+</div>
+<script>
+const canvas = document.getElementById('bezierCanvas');
+const ctx = canvas.getContext('2d');
+const undoBtn = document.getElementById('undoBtn');
+const clearBtn = document.getElementById('clearBtn');
+const showDotCheckbox = document.getElementById('showDot');
+const showCurveCheckbox = document.getElementById('showCurve');
+const showMainDotsCheckbox = document.getElementById('showMainDots');
+const showFixedLinesCheckbox = document.getElementById('showFixedLines');
+const showDotTrailCheckbox = document.getElementById('showDotTrail');
+
+let points = [];
+let pointsHistory = [];
+let colorSeeds = [];
+let showDot = true;
+let showCurve = true;
+let showMainDots = true;
+let showFixedLines = true;
+let showDotTrail = true;
+let dotTrail = [];
+
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight - 80; // Subtract controls height
+}
+
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+function addPoint(x, y) {
+  pointsHistory.push([...points]);
+  points.push({ x, y });
+  colorSeeds.push(Math.random());
+  undoBtn.disabled = false;
+}
+
+function undo() {
+  if (pointsHistory.length > 0) {
+    points = pointsHistory.pop();
+    colorSeeds.pop();
+    if (pointsHistory.length === 0) {
+      undoBtn.disabled = true;
+    }
+  }
+}
+
+function clearAll() {
+  points = [];
+  pointsHistory = [];
+  colorSeeds = [];
+  dotTrail = [];
+  undoBtn.disabled = true;
+}
+
+canvas.addEventListener('click', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  addPoint(x, y);
+});
+
+undoBtn.addEventListener('click', undo);
+clearBtn.addEventListener('click', clearAll);
+showDotCheckbox.addEventListener('change', () => { showDot = showDotCheckbox.checked; });
+showCurveCheckbox.addEventListener('change', () => { showCurve = showCurveCheckbox.checked; });
+showMainDotsCheckbox.addEventListener('change', () => { showMainDots = showMainDotsCheckbox.checked; });
+showFixedLinesCheckbox.addEventListener('change', () => { showFixedLines = showFixedLinesCheckbox.checked; });
+showDotTrailCheckbox.addEventListener('change', () => { 
+  showDotTrail = showDotTrailCheckbox.checked; 
+  if (!showDotTrail) dotTrail = [];
+});
+
+function lerp(a, b, t) {
+  return {
+    x: a.x + (b.x - a.x) * t,
+    y: a.y + (b.y - a.y) * t
+  };
+}
+
+function getVibrantColor(seed, depth) {
+  const hue = (seed * 360 + depth * 30) % 360;
+  const saturation = 80 + Math.random() * 20;
+  const lightness = 50 + Math.random() * 10;
+  return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+}
+
+function drawIntermediateLines(points, t, depth = 0) {
+  if (points.length === 1) return points[0];
+
+  const newPoints = [];
+  ctx.beginPath();
+  ctx.moveTo(points[0].x, points[0].y);
+
+  for (let i = 1; i < points.length; i++) {
+    const p = lerp(points[i - 1], points[i], t);
+    newPoints.push(p);
+    ctx.lineTo(p.x, p.y);
+  }
+
+  if (showCurve || depth === 0) {
+    ctx.strokeStyle = getVibrantColor(colorSeeds[depth], depth);
+    ctx.lineWidth = 2 - depth * 0.2;
+    ctx.stroke();
+  }
+
+  if (newPoints.length > 1) {
+    return drawIntermediateLines(newPoints, t, depth + 1);
+  } else {
+    return newPoints[0];
+  }
+}
+
+function drawFixedLines() {
+  if (showFixedLines && points.length > 1) {
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+      ctx.lineTo(points[i].x, points[i].y);
+    }
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+}
+
+function drawDotTrail() {
+  if (showDotTrail && dotTrail.length > 1) {
+    ctx.beginPath();
+    ctx.moveTo(dotTrail[0].x, dotTrail[0].y);
+    for (let i = 1; i < dotTrail.length; i++) {
+      ctx.lineTo(dotTrail[i].x, dotTrail[i].y);
+    }
+    ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+}
+
+function drawBezierCurve(t) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  drawFixedLines();
+  drawDotTrail();
+
+  if (showMainDots) {
+    // Draw control points
+    ctx.fillStyle = 'rgba(100, 100, 255, 0.7)';
+    for (const point of points) {
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, 5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  if (points.length > 1) {
+    // Draw current point and intermediate lines
+    const currentPoint = drawIntermediateLines(points, t);
+    
+    if (showDot) {
+      ctx.fillStyle = 'rgba(0, 255, 0, 0.7)';
+      ctx.beginPath();
+      ctx.arc(currentPoint.x, currentPoint.y, 8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    if (showDotTrail) {
+      dotTrail.push(currentPoint);
+      if (dotTrail.length > 100) dotTrail.shift(); // Limit trail length
+    }
+
+    // Draw t value
+    ctx.fillStyle = 'white';
+    ctx.font = '16px Arial';
+    ctx.fillText(`t = ${t.toFixed(2)}`, 10, 30);
+  }
+
+  // Draw instructions
+  ctx.fillStyle = 'white';
+  ctx.font = '14px Arial';
+  ctx.fillText('Click to add points. Use "Undo" to remove last point or "Clear All" to start over.', 10, canvas.height - 10);
+}
+
+let t = 0;
+let direction = 1;
+
+function animate() {
+  drawBezierCurve(t);
+
+  if (points.length > 1) {
+    t += 0.005 * direction;
+
+    if (t > 1) {
+      t = 1;
+      direction = -1;
+    } else if (t < 0) {
+      t = 0;
+      direction = 1;
+    }
+  }
+
+  requestAnimationFrame(animate);
+}
+
+animate();
+</script>
+</body></html>
