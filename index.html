@@ -100,6 +100,12 @@
   input:checked + .slider:before {
     transform: translateX(20px);
   }
+  #fullscreenBtn {
+    background-color: #5856D6;
+  }
+  #fullscreenBtn:hover {
+    background-color: #4744CA;
+  }
 </style>
 </head>
 <body>
@@ -109,6 +115,7 @@
 <div id="controls">
   <button id="undoBtn">Undo</button>
   <button id="clearBtn">Clear All</button>
+  <button id="fullscreenBtn">Fullscreen</button>
   <div class="toggle-container">
     <span class="toggle-label">Moving Dot</span>
     <label class="toggle">
@@ -150,6 +157,7 @@ const canvas = document.getElementById('bezierCanvas');
 const ctx = canvas.getContext('2d');
 const undoBtn = document.getElementById('undoBtn');
 const clearBtn = document.getElementById('clearBtn');
+const fullscreenBtn = document.getElementById('fullscreenBtn');
 const showDotCheckbox = document.getElementById('showDot');
 const showCurveCheckbox = document.getElementById('showCurve');
 const showMainDotsCheckbox = document.getElementById('showMainDots');
@@ -199,6 +207,16 @@ function clearAll() {
   undoBtn.disabled = true;
 }
 
+function toggleFullScreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen();
+  } else {
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    }
+  }
+}
+
 canvas.addEventListener('click', (e) => {
   const rect = canvas.getBoundingClientRect();
   const x = e.clientX - rect.left;
@@ -208,6 +226,7 @@ canvas.addEventListener('click', (e) => {
 
 undoBtn.addEventListener('click', undo);
 clearBtn.addEventListener('click', clearAll);
+fullscreenBtn.addEventListener('click', toggleFullScreen);
 showDotCheckbox.addEventListener('change', () => { showDot = showDotCheckbox.checked; });
 showCurveCheckbox.addEventListener('change', () => { showCurve = showCurveCheckbox.checked; });
 showMainDotsCheckbox.addEventListener('change', () => { showMainDots = showMainDotsCheckbox.checked; });
@@ -349,5 +368,15 @@ function animate() {
 }
 
 animate();
+
+document.addEventListener('fullscreenchange', () => {
+  if (document.fullscreenElement) {
+    resizeCanvas();
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  } else {
+    resizeCanvas();
+  }
+});
 </script>
 </body></html>
